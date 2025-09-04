@@ -74,7 +74,7 @@ function App() {
                 {/* Ad Displays */}
                 <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
                   <h3 className="text-base font-semibold text-gray-900 mb-3">Ad Displays</h3>
-                  <p className="text-2xl font-bold text-gray-900 mb-2">2,766,618</p>
+                  <p className="text-2xl font-bold text-gray-900 mb-2">2,766,618 {/* Demo data - replace with actual campaign metrics */}</p>
                   <p className="text-green-700 font-medium text-sm mb-2">+13.5%</p>
                   <p className="text-xs text-gray-500">from 2,438,018</p>
                 </div>
