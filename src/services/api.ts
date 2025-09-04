@@ -1,7 +1,7 @@
 /**
- * CLDB-AI API Service Layer - Compare Agent Only
+ * CLDB-AI API Service Layer - Compare Agent & Benchmark Agent
  * 
- * Provides typed API calls to the Compare Agent backend endpoints.
+ * Provides typed API calls to the CLDB-AI backend endpoints.
  * Matches the exact response structure from /src/models/api_models.py
  */
 
@@ -84,6 +84,65 @@ export interface CompareResponse {
   primary_factor: PrimaryFactor;
   executive_summary: string;
   detailed_analysis: string;
+  created_at: string;
+}
+
+// ========== BENCHMARK AGENT TYPES ==========
+// Matches backend /src/models/api_models.py BenchmarkRequest/BenchmarkResponse
+
+export interface BenchmarkRequest {
+  campaign_id: number;
+  industry?: string;
+  job_type?: string;
+  geographic_region?: string;
+  timeframe?: string;
+  minimum_sample_size?: number;
+  include_trends?: boolean;
+  include_competitive_gaps?: boolean;
+}
+
+export interface IndustryPosition {
+  metric_name: string;
+  campaign_value: number;
+  industry_percentile: number;
+  industry_median: number;
+  industry_top_quartile: number;
+  performance_vs_median: number;
+  rank_description: string;
+}
+
+export interface PerformanceGap {
+  metric_name: string;
+  campaign_value: number;
+  industry_top_10_avg: number;
+  gap_percentage: number;
+  improvement_potential: string;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+}
+
+export interface IndustryTrend {
+  metric_name: string;
+  trend_direction: 'improving' | 'declining' | 'stable';
+  trend_percentage: number;
+  trend_confidence: number;
+  context: string;
+}
+
+export type PerformanceGrade = 'A+' | 'A' | 'A-' | 'B+' | 'B' | 'B-' | 'C+' | 'C' | 'C-' | 'D' | 'F';
+
+export interface BenchmarkResponse {
+  campaign_summary: CampaignSummary;
+  industry_cohort: Record<string, any>;
+  statistical_significance: boolean;
+  industry_positions: IndustryPosition[];
+  overall_industry_grade: PerformanceGrade;
+  overall_percentile: number;
+  performance_gaps: PerformanceGap[];
+  competitive_strengths: string[];
+  industry_trends: IndustryTrend[];
+  competitive_positioning: string;
+  market_opportunity_score: number;
+  insights: AnalysisInsight[];
   created_at: string;
 }
 
@@ -192,6 +251,28 @@ export const apiService = {
         throw error;
       }
       throw new APIError(`Failed to compare campaigns: ${error instanceof Error ? error.message : 'Network error'}`);
+    }
+  },
+
+  /**
+   * Analyze campaign position within industry using Benchmark Agent
+   * Endpoint: POST /api/v1/industry-benchmark
+   */
+  async benchmarkCampaign(request: BenchmarkRequest): Promise<BenchmarkResponse> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/industry-benchmark`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(request),
+      });
+      return await handleResponse<BenchmarkResponse>(response);
+    } catch (error) {
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(`Failed to benchmark campaign: ${error instanceof Error ? error.message : 'Network error'}`);
     }
   },
 

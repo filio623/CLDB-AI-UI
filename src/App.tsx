@@ -227,7 +227,7 @@ function App() {
       case 'roi':
         return <EnhancedROI />;
       case 'benchmark':
-        return <IndustryBenchmark />;
+        return <IndustryBenchmark selectedClient={selectedClient} />;
       case 'performance':
         return <PerformanceReview />;
       case 'improvements':
