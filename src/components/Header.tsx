@@ -1,22 +1,43 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BarChart3, TrendingUp, Zap, Target, Trophy, ChevronDown, Building2 } from 'lucide-react';
+import { apiService, Client, APIError } from '../services/api';
 
 interface HeaderProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
+  selectedClient: Client | null;
+  onClientChange: (client: Client | null) => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange }) => {
+const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, selectedClient, onClientChange }) => {
   const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
-  const [selectedClient, setSelectedClient] = useState('Baker, Williams and Stevens Furniture');
+  const [clients, setClients] = useState<Client[]>([]);
+  const [isLoadingClients, setIsLoadingClients] = useState(true);
+  const [clientError, setClientError] = useState<string | null>(null);
 
-  const clients = [
-    'Baker, Williams and Stevens Furniture',
-    'Blake and Sons Furniture & Appliance',
-    'Modern Home Solutions',
-    'Elite Office Furnishings',
-    'Comfort Living Stores'
-  ];
+  // Load clients on component mount
+  useEffect(() => {
+    const loadClients = async () => {
+      try {
+        setIsLoadingClients(true);
+        setClientError(null);
+        const clientData = await apiService.getClients();
+        setClients(clientData);
+        
+        // Auto-select first client if none selected
+        if (!selectedClient && clientData.length > 0) {
+          onClientChange(clientData[0]);
+        }
+      } catch (error) {
+        console.error('Failed to load clients:', error);
+        setClientError(error instanceof APIError ? error.message : 'Failed to load clients');
+      } finally {
+        setIsLoadingClients(false);
+      }
+    };
+
+    loadClients();
+  }, [selectedClient, onClientChange]);
 
   const tabs = [
     { id: 'compare', label: 'Compare Campaigns', icon: BarChart3 },
@@ -44,15 +65,23 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange }) => {
           <div className="relative">
             <button
               onClick={() => setIsClientDropdownOpen(!isClientDropdownOpen)}
-              className="bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center space-x-2 text-sm"
+              disabled={isLoadingClients}
+              className="bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center space-x-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Building2 className="w-3 h-3" />
-              <span className="max-w-48 truncate">{selectedClient}</span>
+              <span className="max-w-48 truncate">
+                {isLoadingClients 
+                  ? 'Loading clients...' 
+                  : clientError 
+                    ? 'Error loading clients' 
+                    : selectedClient?.client_name || 'Select client'
+                }
+              </span>
               <ChevronDown className={`w-3 h-3 transition-transform ${isClientDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
             
             {isClientDropdownOpen && (
-              <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+              <div className="absolute right-0 mt-1 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
                 <div className="p-2 border-b border-gray-200">
                   <h3 className="font-medium text-gray-900 flex items-center space-x-1 text-sm">
                     <Building2 className="w-3 h-3" />
@@ -61,23 +90,38 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange }) => {
                   <p className="text-xs text-gray-500 mt-0.5">Choose a client to analyze their campaigns</p>
                 </div>
                 <div className="max-h-48 overflow-y-auto">
-                  {clients.map((client) => (
-                    <button
-                      key={client}
-                      onClick={() => {
-                        setSelectedClient(client);
-                        setIsClientDropdownOpen(false);
-                      }}
-                      className={`w-full text-left px-3 py-2 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0 text-sm ${
-                        selectedClient === client ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
-                      }`}
-                    >
-                      <div className="font-medium text-sm">{client}</div>
-                      <div className="text-xs text-gray-500">
-                        {client.includes('Furniture') ? 'Furniture Industry' : 'Home & Office'}
-                      </div>
-                    </button>
-                  ))}
+                  {clientError ? (
+                    <div className="px-3 py-2 text-sm text-red-600">
+                      {clientError}
+                    </div>
+                  ) : isLoadingClients ? (
+                    <div className="px-3 py-2 text-sm text-gray-500">
+                      Loading clients...
+                    </div>
+                  ) : clients.length === 0 ? (
+                    <div className="px-3 py-2 text-sm text-gray-500">
+                      No clients available
+                    </div>
+                  ) : (
+                    clients.map((client) => (
+                      <button
+                        key={client.client_id}
+                        onClick={() => {
+                          onClientChange(client);
+                          setIsClientDropdownOpen(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0 text-sm ${
+                          selectedClient?.client_id === client.client_id ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
+                        }`}
+                      >
+                        <div className="font-medium text-sm">{client.client_name}</div>
+                        <div className="text-xs text-gray-500 flex justify-between">
+                          <span>{client.industry}</span>
+                          <span>{client.campaign_count} campaigns</span>
+                        </div>
+                      </button>
+                    ))
+                  )}
                 </div>
               </div>
             )}
